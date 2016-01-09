@@ -1,0 +1,121 @@
+STM32-Tx-HID
+------------
+
+This project aims to bring inexpensive and easy solution to the task
+of connecting various RC transmitters to a computer.
+
+With the wide availability of relatively cheap RC toys a beginner user
+might end up with a reasonably decent collective pitch helicopter and
+a cheap transmitter as part of an RTF bundle. Learning to control a CP
+heli can be a daunting task, so a lot of people prefer to practice
+with a computer simulation. However, many transmitters do not support
+USB connectivity (and some do not even provide a PPM output). To
+connect equipment like that to a computer, additional hardware is
+needed.
+
+This firmware is targetting the cheapest STM32F103 board as found in
+numerous listings on eBay and Aliexpress (might have the following
+keywords: ARM STM32F103C8T6 Minimum System Development Board Module
+For Arduino).
+
+The board photo is in stm32f103-board.jpg.
+
+Once the firmware is installed and running, a computer will see a
+regular HID joystick with 8 analog channels and 8 buttons. During USB
+operation the power switch must be in the off state, the device is
+bus-powered. Once you disconnect the board from a computer and power
+on the transmitter normally, the board goes to a sleep mode and
+doesn't interfere with normal operation.
+
+* Board description
+The board has an STM32F103C8T6 controller (in LQFP48 package),
+microusb connector, 8 MHz main quartz and an additional 32768 kHz
+quartz for clock. The controller is powered from an LDO outputting
+3.3V from the 5V USB bus. D+ pullup resistor is permanently attached
+but software can force USB bus reset by putting the corresponding pin
+(PA12) in GPIO push-pull mode and setting it low for at least
+2.5us. It also has a physical reset button and two LEDs: one
+permanently on, one controlled by PC13 (active low).
+
+In addition to that there're 4 pins exposed for SWD (flashing and
+debug) and two jumpers (unlabeled). Both jumpers can connect their
+middle pin either to the GND ("0" position) or the Vcc ("1"
+position). The jumper that is closer to the board side has middle pin
+connected to BOOT0 via a 100k series resistor and the other jumper is
+connected via a 100k series resistor to BOOT1.
+
+For reliable board startup both BOOTx pins should be pulled low ("0"
+position).
+
+* Building the firmware
+After cloning the repository "git submodule init; git submodule
+update" needs to be run once, then "make" to build everything
+necessary.
+
+It is assumed that "arm-none-eabi" toolchain is available in PATH,
+"GCC ARM Embedded" is the recommended option. In case you need to
+specify a path, CROSS_COMPILE make variable should be set
+appropriately.
+
+* Initial flashing procedure
+There're two ways of flashing a blank board: via SWD and via serial
+bootloader. For the first method a suitable debug adapter is needed
+(e.g. ST-Link or J-Link), for the second one can use just about any
+USB-UART bridge (the only requirement that is a bit unusual is to
+support "even" parity).
+
+The image to be flashed is "stm32-tx-hid-bootldr-combined.bin", it
+contains both a DFU-compliant bootloader and the main firmware. After
+the bootloader is in place, you can reflash via USB without
+disassembly and attaching any additional hardware, see the next
+section.
+
+To flash the controller via its serial ROM bootloader the BOOT0 jumper
+(the one closer to the board side) should be switched to "1" and
+USART1 (PA9/TX, PA10/RX) attached to a computer running stm32flash
+software (http://sourceforge.net/projects/stm32flash/, alternatively,
+windows users might consider
+http://www.st.com/web/en/catalog/tools/PF257525). When flashing the
+board for the first time full mass-erase might need to be performed by
+using stm32flash's "-k" option ("Disable the flash
+read-protection"). Do not forget to switch the jumper back to "0"
+after flashing is complete.
+
+To flash via SWD with ST-Link the following command can be used:
+openocd -f interface/stlink-v2.cfg -f target/stm32f1x.cfg \
+	-c "init; reset halt; stm32f1x mass_erase 0" \
+	-c "program stm32-tx-hid-bootldr-combined.bin 0x08000000 verify reset exit"
+
+* Reflashing via the DFU bootloader
+If the main firmware is functioning normally, dfu-util will be able
+to reset the board into the bootloader mode automatically. In case
+that doesn't work one can force bootloader mode by pulling both PB8
+and PB9 low before attaching USB.
+
+To update the main board firmware use the following command:
+
+dfu-util -R -s 0x08002000 -D stm32-tx-hid.bin
+
+Alternatively, windows users can consider ST's DfuSe utility
+(http://www.st.com/web/en/catalog/tools/FM147/CL1794/SC961/SS1533/PF257916).
+
+* Connecting the board to the transmitter
+The firmware assumes the following connections are made:
+
+1. PA0-PA7 are used as 8 analog channels; ground the unused ones;
+2. PB8-PB15 are used as 8 discrete inputs, pulled-up internally;
+3. PB0 is pulled low when USB is connected, it might be attached to
+   the transmitter's microcontroller's nRST line to stop it from
+   interfering;
+4. GND and 3.3V must be connected to the corresponding transmitter
+   points.
+
+* Development and contacts
+The development repository is hosted at:
+https://github.com/paulfertser/stm32-tx-hid.
+
+If you have any suggestions or questions, feel free to contact me
+directly via email.
+
+Have fun, and happy flying,
+Paul Fertser <fercerpav@gmail.com>

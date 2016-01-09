@@ -1,0 +1,9 @@
+1. Rewrite ADC acquisition with DMA
+2. Check systick timings
+3. Check USB suspend with different OSes
+4. What can be done about USB autosuspend releasing nSRST when PC is
+   still attached
+5. Investigate trimmer buttons on v977 tx
+6. Software debouncing for discrete inputs
+7. Consider adding user-tweakable options
+8. Software filtering ADC inputs
